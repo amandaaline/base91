@@ -5,10 +5,11 @@
 #define BASE 91
 
 typedef struct {
-  uint64_t buffer;
-  uint32_t size;
+  uint64_t buffer; // using bit in interger of size 64 bits to store information
+  uint32_t size; // how many bit already stored
 } Buffer;
 
+// Concat at the end of a buffer, k bits comming from another buffer.
 void insert (Buffer* b, uint32_t buff, uint32_t k) {
 	for (uint64_t i = b->size; i < b->size+k; ++i) {
 		b->buffer |= (buff & (1 << i));
@@ -17,6 +18,7 @@ void insert (Buffer* b, uint32_t buff, uint32_t k) {
 	b->size += k;
 }
 
+// Extract from the beggining of the buffer n bits
 uint64_t extract (Buffer* b, int n) {
   if (n > 64) return 0;
   
@@ -33,6 +35,7 @@ uint64_t extract (Buffer* b, int n) {
 	return x;
 }
 
+// Get the file size
 uint64_t getSize (FILE * fp) {
   uint64_t size;
   
@@ -62,12 +65,12 @@ void decode (FILE * input, FILE * output) {
 
 		if (y1 == 90 && y2 == 90) break;
 
-	aux_out = (y1 * BASE) + y2;
-	insert(&out, aux_out, 13);
+		aux_out = (y1 * BASE) + y2;
+		insert(&out, aux_out, 13);
 		
 		while (out.size >= 8) {
 		  aux_out = extract(&out, 8);
-		  fwrite(&aux_out, 1, filesize, output);
+		  fwrite(&aux_out, 1, filesize, output); // print a byte
 		}
 	}
 
