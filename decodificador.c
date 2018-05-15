@@ -62,8 +62,8 @@ void decode (FILE * input, FILE * output) {
 
 		if (y1 == 90 && y2 == 90) break;
 
-    aux_out = (y1 * BASE) + y2;
-    insert(&out, aux_out, 13);
+	aux_out = (y1 * BASE) + y2;
+	insert(&out, aux_out, 13);
 		
 		while (out.size >= 8) {
 		  aux_out = extract(&out, 8);
