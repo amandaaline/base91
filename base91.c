@@ -5,8 +5,8 @@
 #define BASE 91
 
 typedef struct {
-  uint64_t buffer; // using bit in interger of size 64 bits to store information
-  uint32_t size; // how many bit already stored
+	uint64_t buffer; // using bit in interger of size 64 bits to store information
+	uint32_t size; // how many bit already stored
 } Buffer;
 
 // Concat at the end of a buffer, k bits comming from another buffer.
@@ -20,8 +20,8 @@ void insert (Buffer* b, uint32_t buff, uint32_t k) {
 
 // Extract from the beggining of the buffer n bits
 uint64_t extract (Buffer* b, int n) {
-  if (n > 64) return 0;
-  
+	if (n > 64) return 0;
+
 	uint64_t x = 0;
 
 	// this will read n bits
@@ -37,22 +37,22 @@ uint64_t extract (Buffer* b, int n) {
 
 // Get the file size
 uint64_t getSize (FILE * fp) {
-  uint64_t size;
-  
-  fseek(fp , 0 , SEEK_END);
-  size = ftell (fp);
-  rewind(fp);
-  
-  return size;
+	uint64_t size;
+
+	fseek(fp , 0 , SEEK_END);
+	size = ftell (fp);
+	rewind(fp);
+
+	return size;
 }
 
 void decode (FILE * input, FILE * output) {
-  printf("Starting... ");
-  
-  Buffer in, out;
-  uint16_t aux_in, aux_out;
-  uint32_t k, x, y1, y2;
-  uint64_t filesize = getSize(input);
+	printf("Starting... ");
+
+	Buffer in, out;
+	uint16_t aux_in, aux_out;
+	uint32_t k, x, y1, y2;
+	uint64_t filesize = getSize(input);
 	
 	while (true) {
 		k = fread(&aux_in, 1, filesize, input); // read a byte
@@ -70,8 +70,8 @@ void decode (FILE * input, FILE * output) {
 		insert(&out, aux_out, 13);
 		
 		while (out.size >= 8) {
-		  aux_out = extract(&out, 8);
-		  fwrite(&aux_out, 1, filesize, output); // print a byte
+			aux_out = extract(&out, 8);
+			fwrite(&aux_out, 1, filesize, output); // print a byte
 		}
 	}
 
@@ -79,12 +79,12 @@ void decode (FILE * input, FILE * output) {
 }
 
 void encode (FILE * input, FILE * output) {
-  printf("Starting... ");
-  
-  Buffer in, out;
-  uint16_t aux_in, aux_out;
-  uint32_t k, x, y1, y2;
-  uint64_t filesize = getSize(input);
+	printf("Starting... ");
+
+	Buffer in, out;
+	uint16_t aux_in, aux_out;
+	uint32_t k, x, y1, y2;
+	uint64_t filesize = getSize(input);
 	
 	while (true) {
 		k = fread(&aux_in, 1, filesize, input); // read a byte
@@ -94,26 +94,26 @@ void encode (FILE * input, FILE * output) {
 		insert(&in, aux_in, k);
 
 		if (in.size < 14) continue;
-  
-    x = extract(&in, 13);
+
+		x = extract(&in, 13);
 		y1 = x / BASE;
 		y2 = x % BASE;
 
-    aux_out = (y1 | (y2 << 7));
-    insert(&out, aux_out, 14);
-		
+		aux_out = (y1 | (y2 << 7));
+		insert(&out, aux_out, 14);
+			
 		while (out.size >= 8) {
-		  aux_out = extract(&out, 8);
-		  fwrite(&aux_out, 1, filesize, output);
+			aux_out = extract(&out, 8);
+			fwrite(&aux_out, 1, filesize, output);
 		}
 	}
 	
-  if (out.size > 0) {
-	  aux_out = 0;
-	  k = (8 - out.size); 
-  	insert(&out, aux_out, k);
-  	aux_out = extract(&out, 8);
-  	fwrite(&aux_out, 1, filesize, output);
+	if (out.size > 0) {
+		aux_out = 0;
+		k = (8 - out.size); 
+		insert(&out, aux_out, k);
+		aux_out = extract(&out, 8);
+		fwrite(&aux_out, 1, filesize, output);
 	}
 	
 	y1 = y2 = 90;
