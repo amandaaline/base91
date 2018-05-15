@@ -77,6 +77,51 @@ void decode (FILE * input, FILE * output) {
 	printf("Done!\n");
 }
 
+void encode (FILE * input, FILE * output) {
+  printf("Starting... ");
+  
+  Buffer in, out;
+  uint16_t aux_in, aux_out;
+  uint32_t x, y1, y2;
+  uint64_t filesize = getSize(input);
+	
+	while (true) {
+		int k = fread(&aux_in, 1, filesize, input); // read a byte
+		
+		if (k = 0) break;
+
+		insert(&in, aux_in, k);
+
+		if (in.size < 14) continue;
+  
+    x = extract(&in, 13);
+		y1 = x / BASE;
+		y2 = x % BASE;
+
+    aux_out = (y1 | (y2 << 7));
+    insert(&out, aux_out, 14);
+		
+		while (out.size >= 8) {
+		  aux_out = extract(&out, 8);
+		  fwrite(&aux_out, 1, filesize, output);
+		}
+	}
+	
+  if (out.size > 0) {
+	  aux_out = 0;
+	  k = (8 - out.size); 
+  	insert(&out, aux_out, k);
+  	aux_out = extract(&out, 8);
+  	fwrite(&aux_out, 1, filesize, output);
+	}
+	
+	y1 = y2 = 90;
+	aux_out = (y1 | (y2 << 7));
+	insert(&out, aux_out, 14);
+
+	printf("Done!\n");
+}
+
 int main () {
 	char filename_input[100];
 	char filename_output[100];
@@ -86,8 +131,9 @@ int main () {
 
 	FILE * input = fopen(filename_input, "rb");
 	FILE * output = fopen(filename_output, "wb");
-
-	decode(input, output);	
+	
+	encode(input, output);
+	//decode(input, output);	
 
 	return 0;
 }
