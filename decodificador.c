@@ -21,11 +21,11 @@ bool bufferIsEnd (int y1, int y2) {
 	return (y1 == 90) && (y2 == 90);
 }
 
-uint64_t bufferGetY (int k) {
+uint64_t bufferGetY (int k, int b) {
 	uint64_t y = 0;
 
-	// this will read 7 bits
-	for (uint64_t i = k; i < k+7; ++i) {
+	// this will read b bits
+	for (uint64_t i = k; i < k+b; ++i) {
 		y |= (buff & (1 << i));
 	}
 
@@ -47,17 +47,20 @@ void decode (FILE * input, FILE * output) {
 
 		if (size < 14) continue;
 
-		uint64_t y1 = bufferGetY(0);
-		uint64_t y2 = bufferGetY(7);
+		uint64_t y1 = bufferGet(0, 7);
+		uint64_t y2 = bufferGet(7, 7);
 		bufferReduce(14);
 
 		if (bufferIsEnd(y1, y2)) break;
 
 		uint64_t x = getX(y1, y2);
 
-		printf("%llu\n", x);
+		uint64_t aux2 = buff;
+		buff = x;
+		char o = bufferGet(0, 8);
+		buff = aux2;		
 
-		//write(output, x);
+		write(o, output);
 	}
 
 	printf("Done!\n");
