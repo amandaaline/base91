@@ -51,17 +51,18 @@ void decode (FILE * input, FILE * output) {
   
   Buffer in, out;
   uint16_t aux_in, aux_out;
+  uint32_t k, x, y1, y2;
   uint64_t filesize = getSize(input);
 	
 	while (true) {
-		int k = fread(&aux_in, 1, filesize, input); // read a byte
+		k = fread(&aux_in, 1, filesize, input); // read a byte
 
 		insert(&in, aux_in, k);
 
 		if (in.size < 14) continue;
 
-		uint64_t y1 = extract(&in, 7);
-		uint64_t y2 = extract(&in, 7);
+		y1 = extract(&in, 7);
+		y2 = extract(&in, 7);
 
 		if (y1 == 90 && y2 == 90) break;
 
@@ -82,11 +83,11 @@ void encode (FILE * input, FILE * output) {
   
   Buffer in, out;
   uint16_t aux_in, aux_out;
-  uint32_t x, y1, y2;
+  uint32_t k, x, y1, y2;
   uint64_t filesize = getSize(input);
 	
 	while (true) {
-		int k = fread(&aux_in, 1, filesize, input); // read a byte
+		k = fread(&aux_in, 1, filesize, input); // read a byte
 		
 		if (k = 0) break;
 
