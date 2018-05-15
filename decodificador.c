@@ -4,63 +4,71 @@
 
 #define BASE 91
 
-uint32_t size = 0;
-uint64_t buff = 0;
+typedef struct {
+  uint64_t buffer;
+  uint32_t size;
+} Buffer;
 
-void bufferInsert (int aux, int k) {
-	for (uint64_t i = size; i < size+k; ++i) {
-		buff |= (aux & (1 << i));
+void insert (Buffer* b, uint32_t buff, uint32_t k) {
+	for (uint64_t i = b->size; i < b->size+k; ++i) {
+		b->buffer |= (buff & (1 << i));
 	}
+	
+	b->size += k;
 }
 
-void bufferReduce (int k) {
-	buff >>= k;
-}
+uint64_t extract (Buffer* b, int n) {
+  if (n > 64) return 0;
+  
+	uint64_t x = 0;
 
-bool bufferIsEnd (int y1, int y2) {
-	return (y1 == 90) && (y2 == 90);
-}
-
-uint64_t bufferGetY (int k, int b) {
-	uint64_t y = 0;
-
-	// this will read b bits
-	for (uint64_t i = k; i < k+b; ++i) {
-		y |= (buff & (1 << i));
+	// this will read n bits
+	for (uint64_t i = 0; i < n; ++i) {
+		x |= (b->buffer & (1 << i));
 	}
+	
+	b->buffer >>= n;
+	b->size -= n;
 
-	return y;
+	return x;
 }
 
-uint64_t getX (uint64_t y1, uint64_t y2) {
-	return (y1 * BASE) + y2;
+uint64_t getSize (FILE * fp) {
+  uint64_t size;
+  
+  fseek(fp , 0 , SEEK_END);
+  size = ftell (fp);
+  rewind(fp);
+  
+  return size;
 }
 
 void decode (FILE * input, FILE * output) {
-	char aux;
-	printf("Starting... ");
-
+  printf("Starting... ");
+  
+  Buffer in, out;
+  uint16_t aux_in, aux_out;
+  uint64_t filesize = getSize(input);
+	
 	while (true) {
-		int k = fread(&aux, sizeof aux, 1, input);
+		int k = fread(&aux_in, 1, filesize, input); // read a byte
 
-		bufferInsert(aux, k);
+		insert(&in, aux_in, k);
 
-		if (size < 14) continue;
+		if (in.size < 14) continue;
 
-		uint64_t y1 = bufferGet(0, 7);
-		uint64_t y2 = bufferGet(7, 7);
-		bufferReduce(14);
+		uint64_t y1 = extract(&in, 7);
+		uint64_t y2 = extract(&in, 7);
 
-		if (bufferIsEnd(y1, y2)) break;
+		if (y1 == 90 && y2 == 90) break;
 
-		uint64_t x = getX(y1, y2);
-
-		uint64_t aux2 = buff;
-		buff = x;
-		char o = bufferGet(0, 8);
-		buff = aux2;		
-
-		write(o, output);
+    aux_out = (y1 * BASE) + y2;
+    insert(&out, aux_out, 13);
+		
+		while (out.size >= 8) {
+		  aux_out = extract(&out, 8);
+		  fwrite(&aux_out, 1, filesize, output);
+		}
 	}
 
 	printf("Done!\n");
