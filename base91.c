@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define BASE 91
 
@@ -9,30 +10,53 @@ typedef struct {
 	uint32_t size; // how many bit already stored
 } Buffer;
 
-// Concat at the end of a buffer, k bits comming from another buffer.
+// Insert k LSB from buff into b
 void insert (Buffer* b, uint32_t buff, uint32_t k) {
-	for (uint64_t i = b->size; i < b->size+k; ++i) {
-		b->buffer |= (buff & (1 << i));
-	}
-	
+	b->buffer <<= k;
+	b->buffer |= buff & ((1 << k) - 1);
 	b->size += k;
 }
 
-// Extract from the beggining of the buffer n bits
+// Extract n MSB from b
 uint64_t extract (Buffer* b, int n) {
-	if (n > 64) return 0;
-
-	uint64_t x = 0;
-
-	// this will read n bits
-	for (uint64_t i = 0; i < n; ++i) {
-		x |= (b->buffer & (1 << i));
-	}
+	if (n > b->size) return 0;
 	
-	b->buffer >>= n;
+	uint64_t shift = b->size - n;
+	// this will read n bits
+	uint64_t x = (b->buffer >> shift) & ((1UL << n) - 1);
+	
+	b->buffer &= (1UL << shift) - 1;
 	b->size -= n;
 
 	return x;
+}
+
+void read (Buffer* b, int nbytes, FILE* fp) {
+	uint8_t byte;
+	while (nbytes--) {
+		if(!fread(&byte, 1, 1, fp)) return;
+		insert(b, byte, 8);
+	}
+}
+
+void dump (Buffer* b, FILE* fp) {
+	uint8_t byte;
+	while(b->size >= 8) {
+		byte = extract(b, 8);
+		fwrite(&byte, 1, 1, fp);
+	}
+}
+
+void to_b91(Buffer* b_in, Buffer* b_out) {
+	uint32_t y1, y2;
+	uint64_t y;
+	while(b_in->size >= 13) {
+		y = extract(b_in, 13);
+		y1 = y / 91;
+		y2 = y % 91;
+		insert(b_out, y1, 7);
+		insert(b_out, y2, 7);
+	}
 }
 
 // Get the file size
@@ -82,43 +106,38 @@ void encode (FILE * input, FILE * output) {
 	printf("Starting... ");
 
 	Buffer in, out;
-	uint16_t aux_in, aux_out;
-	uint32_t k, x, y1, y2;
-	uint64_t filesize = getSize(input);
-	
-	while (true) {
-		k = fread(&aux_in, 1, filesize, input); // read a byte
-		
-		if (k = 0) break;
+	uint8_t byte;
+	uint32_t y1, y2, n;
+	uint64_t y;
 
-		insert(&in, aux_in, k);
+	in.buffer  = 0;
+	in.size    = 0;
+	out.buffer = 0;
+	out.size   = 0;
 
-		if (in.size < 14) continue;
-
-		x = extract(&in, 13);
-		y1 = x / BASE;
-		y2 = x % BASE;
-
-		aux_out = (y1 | (y2 << 7));
-		insert(&out, aux_out, 14);
-			
-		while (out.size >= 8) {
-			aux_out = extract(&out, 8);
-			fwrite(&aux_out, 1, filesize, output);
-		}
+	while (!feof(input)) {
+		read(&in, 5, input);
+		to_b91(&in, &out);
+		dump(&out, output);
 	}
-	
-	if (out.size > 0) {
-		aux_out = 0;
-		k = (8 - out.size); 
-		insert(&out, aux_out, k);
-		aux_out = extract(&out, 8);
-		fwrite(&aux_out, 1, filesize, output);
+
+	if (in.size) {
+		n = 13 - in.size;
+		insert(&in, 0, n);
+		insert(&in, 8191 + n, 13);
+		to_b91(&in, &out);
+		dump(&out, output);
 	}
-	
-	y1 = y2 = 90;
-	aux_out = (y1 | (y2 << 7));
-	insert(&out, aux_out, 14);
+
+	insert(&out, '=', 7);
+	insert(&out, '=', 7);
+	dump(&out, output);
+
+	// File must have a whole number of bytes.
+	if (out.size) {
+		insert(&out, 0, 8 - out.size);
+		dump(&out, output);
+	}
 
 	printf("Done!\n");
 }
@@ -127,14 +146,22 @@ int main () {
 	char filename_input[100];
 	char filename_output[100];
 
-	printf("Nome do arquivo: ");
-	scanf("%100s", filename_input);
+	printf("Nome do arquivo a ser codificado: ");
+	// scanf("%100s", filename_input);
+	strcpy(filename_input, "entrada.txt");
+
+	printf("\nNome do arquivo de saída: ");
+	// scanf("%100s", filename_output);
+	strcpy(filename_output, "saida.txt");
 
 	FILE * input = fopen(filename_input, "rb");
 	FILE * output = fopen(filename_output, "wb");
 	
 	encode(input, output);
-	//decode(input, output);	
+	//decode(input, output);
+
+	fclose(input);
+	fclose(output);
 
 	return 0;
 }
