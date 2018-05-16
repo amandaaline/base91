@@ -47,7 +47,18 @@ void dump (Buffer* b, FILE* fp) {
 	}
 }
 
-void to_b91(Buffer* b_in, Buffer* b_out) {
+void to_b (Buffer* b_in, Buffer* b_out) {
+	uint32_t y1, y2;
+	uint64_t x;
+	while(b_in->size >= 14) {
+		y1 = extract(b_in, 7);
+		y2 = extract(b_in, 7);
+		x = (y1 * BASE) + y2;
+		insert(b_out, x, 13);
+	}	
+}
+
+void to_b91 (Buffer* b_in, Buffer* b_out) {
 	uint32_t y1, y2;
 	uint64_t y;
 	while(b_in->size >= 13) {
@@ -74,29 +85,19 @@ void decode (FILE * input, FILE * output) {
 	printf("Starting... ");
 
 	Buffer in, out;
-	uint16_t aux_in, aux_out;
-	uint32_t k, x, y1, y2;
-	uint64_t filesize = getSize(input);
-	
-	while (true) {
-		k = fread(&aux_in, 1, filesize, input); // read a byte
+	uint8_t byte;
+	uint32_t y1, y2, n;
+	uint64_t y;
 
-		insert(&in, aux_in, k);
+	in.buffer  = 0;
+	in.size    = 0;
+	out.buffer = 0;
+	out.size   = 0;
 
-		if (in.size < 14) continue;
-
-		y1 = extract(&in, 7);
-		y2 = extract(&in, 7);
-
-		if (y1 == 90 && y2 == 90) break;
-
-		aux_out = (y1 * BASE) + y2;
-		insert(&out, aux_out, 13);
-		
-		while (out.size >= 8) {
-			aux_out = extract(&out, 8);
-			fwrite(&aux_out, 1, filesize, output); // print a byte
-		}
+	while (!feof(input)) {
+		read(&in, 5, input);
+		to_b(&in, &out);
+		dump(&out, output);
 	}
 
 	printf("Done!\n");
@@ -129,8 +130,8 @@ void encode (FILE * input, FILE * output) {
 		dump(&out, output);
 	}
 
-	insert(&out, '=', 7);
-	insert(&out, '=', 7);
+	insert(&out, 90, 7);
+	insert(&out, 90, 7);
 	dump(&out, output);
 
 	// File must have a whole number of bytes.
@@ -157,8 +158,22 @@ int main () {
 	FILE * input = fopen(filename_input, "rb");
 	FILE * output = fopen(filename_output, "wb");
 	
-	encode(input, output);
-	//decode(input, output);
+	printf("Aperte [1] para codificar para base91\n");
+	printf("Aperte [2] para decodificar de base91\n");
+
+	int op = 0;
+	scanf("%d", op);
+
+	switch (op) {
+		case 1:
+			encode(input, output);
+			break;
+		case 2:
+			decode(input, output);			
+			break;
+		default:
+			printf("Tente novamente!\n");
+	}
 
 	fclose(input);
 	fclose(output);
