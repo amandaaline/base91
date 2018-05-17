@@ -111,25 +111,31 @@ void encode (FILE * input, FILE * output) {
 	uint32_t y1, y2, n;
 	uint64_t y;
 
+	// Initialize buffers
 	in.buffer  = 0;
 	in.size    = 0;
 	out.buffer = 0;
 	out.size   = 0;
 
+
+	// Read bytes from input file to buffer, convert them to B91,
+	// store them in output buffer and dump output buffer to output file
 	while (!feof(input)) {
 		read(&in, 5, input);
 		to_b91(&in, &out);
 		dump(&out, output);
 	}
 
-	if (in.size) {
+	if (in.size) { // Input file size is not multiple of 13 bits
 		n = 13 - in.size;
-		insert(&in, 0, n);
-		insert(&in, 8191 + n, 13);
+		insert(&in, 0, n); // Pad input buffer with zeros so it has 13 bits
+		insert(&in, 8191 + n, 13); // Indicates how many bits were used as padding
 		to_b91(&in, &out);
 		dump(&out, output);
 	}
 
+
+	// This sequence indicates the end of B91 bitstream
 	insert(&out, 90, 7);
 	insert(&out, 90, 7);
 	dump(&out, output);
